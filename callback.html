@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>인증 결과</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #1e1e2e;
+            color: white;
+        }
+        .container {
+            background: #282a36;
+            padding: 20px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+        img {
+            width: 200px;
+            height: 200px;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 id="status">인증 처리 중...</h1>
+        <img id="statusImage" src="" alt="결과 이미지">
+        <p id="errorMessage" class="error"></p>
+    </div>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const authStatus = urlParams.get('status');
+        const userId = urlParams.get('userId'); 
+        const ipAddress = urlParams.get('ip'); 
+
+        const statusText = document.getElementById("status");
+        const statusImage = document.getElementById("statusImage");
+        const errorMessage = document.getElementById("errorMessage");
+
+        if (authStatus === 'success') {
+            statusText.textContent = '✅ 인증 성공!';
+            statusImage.src = '/images/ok.png'; 
+
+            fetch(`https://ipinfo.io/${ipAddress}/json`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.org && (data.org.includes("VPN") || data.org.includes("Proxy"))) {
+                        statusText.textContent = '❌ 인증 실패 (VPN 사용)';
+                        statusImage.src = '/images/error.png'; 
+                        errorMessage.textContent = 'VPN 사용으로 인해 인증이 제한되었습니다.';
+
+                        fetch(`https://your-bot-api.com/updateRole?userId=${userId}&status=error&message=VPN+사용+때문에+인증+제한됨`)
+                            .then(response => response.json())
+                            .then(data => console.log('디스코드 서버 업데이트:', data))
+                            .catch(error => console.error('로그 기록 실패:', error));
+
+
+                        window.location.href = 'error.html';
+                    } else {
+                        fetch(`https://your-bot-api.com/updateRole?userId=${userId}&status=success`)
+                            .then(response => response.json())
+                            .then(data => console.log('디스코드 서버 업데이트:', data))
+                            .catch(error => console.error('로그 기록 실패:', error));
+
+                        window.location.href = 'ok.html';
+                    }
+                })
+                .catch(error => {
+                    console.error('IP 정보 오류:', error);
+                    statusText.textContent = '❌ 인증 실패';
+                    statusImage.src = '/images/error.png'; 
+
+                    window.location.href = 'error.html';
+                });
+        } else {
+            statusText.textContent = '❌ 인증 실패';
+            statusImage.src = '/images/error.png';
+
+            fetch(`https://your-bot-api.com/updateRole?userId=${userId}&status=error&message=인증+실패`)
+                .then(response => response.json())
+                .then(data => console.log('디스코드 서버 업데이트:', data))
+                .catch(error => console.error('로그 기록 실패:', error));
+
+            window.location.href = 'error.html';
+        }
+    </script>
+</body>
+</html>
